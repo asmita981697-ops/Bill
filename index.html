@@ -1,0 +1,865 @@
+import React, { useState, useRef } from ‘react’;
+import { Plus, Trash2, Edit2, Eye, BarChart3, Package, DollarSign, Printer, Download, X, ArrowUp, ArrowDown, Home } from ‘lucide-react’;
+
+const AsmitaHotelPMS = () => {
+const [activeTab, setActiveTab] = useState(‘dashboard’);
+const [stocks, setStocks] = useState([
+{ id: 1, name: ‘Coffee’, category: ‘Beverages’, quantity: 50, price: 150, minStock: 10 },
+{ id: 2, name: ‘Tea’, category: ‘Beverages’, quantity: 80, price: 100, minStock: 15 },
+{ id: 3, name: ‘Mineral Water’, category: ‘Beverages’, quantity: 200, price: 50, minStock: 50 },
+{ id: 4, name: ‘Biryani’, category: ‘Food’, quantity: 20, price: 350, minStock: 5 },
+{ id: 5, name: ‘Paneer Butter Masala’, category: ‘Food’, quantity: 15, price: 320, minStock: 5 },
+]);
+
+const [bills, setBills] = useState([
+{ id: ‘BILL001’, tableNo: 1, items: [], totalBefore: 0, tax: 0, vat: 0, totalAfter: 0, date: new Date(), status: ‘completed’ }
+]);
+
+const [cartItems, setCartItems] = useState([]);
+const [selectedTable, setSelectedTable] = useState(null);
+const [showNewStockModal, setShowNewStockModal] = useState(false);
+const [showAddToCart, setShowAddToCart] = useState(false);
+const [selectedProduct, setSelectedProduct] = useState(null);
+const [quantity, setQuantity] = useState(1);
+const [newStock, setNewStock] = useState({ name: ‘’, category: ‘’, quantity: 0, price: 0, minStock: 0 });
+const [editingStock, setEditingStock] = useState(null);
+const [selectedBill, setSelectedBill] = useState(null);
+const [taxRate, setTaxRate] = useState(5);
+const [vatRate, setVatRate] = useState(5);
+
+const TAX_RATE = 5;
+const VAT_RATE = 5;
+
+const handleAddStock = () => {
+if (newStock.name && newStock.category) {
+if (editingStock) {
+setStocks(stocks.map(s => s.id === editingStock.id ? { …newStock, id: editingStock.id } : s));
+setEditingStock(null);
+} else {
+setStocks([…stocks, { …newStock, id: Math.max(…stocks.map(s => s.id), 0) + 1 }]);
+}
+setNewStock({ name: ‘’, category: ‘’, quantity: 0, price: 0, minStock: 0 });
+setShowNewStockModal(false);
+}
+};
+
+const handleDeleteStock = (id) => {
+setStocks(stocks.filter(s => s.id !== id));
+};
+
+const handleAddToCart = (product) => {
+const item = cartItems.find(i => i.id === product.id);
+if (item) {
+if (item.quantity + quantity <= product.quantity) {
+setCartItems(cartItems.map(i =>
+i.id === product.id ? { …i, quantity: i.quantity + quantity } : i
+));
+} else {
+alert(‘Insufficient stock!’);
+return;
+}
+} else {
+if (quantity <= product.quantity) {
+setCartItems([…cartItems, { …product, quantity }]);
+} else {
+alert(‘Insufficient stock!’);
+return;
+}
+}
+setQuantity(1);
+setSelectedProduct(null);
+setShowAddToCart(false);
+};
+
+const handleRemoveFromCart = (id) => {
+setCartItems(cartItems.filter(item => item.id !== id));
+};
+
+const handleUpdateCartQuantity = (id, newQty) => {
+const product = stocks.find(s => s.id === id);
+if (newQty > 0 && newQty <= product.quantity) {
+setCartItems(cartItems.map(i => i.id === id ? { …i, quantity: newQty } : i));
+}
+};
+
+const calculateTotals = () => {
+const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+const tax = subtotal * (TAX_RATE / 100);
+const vat = (subtotal + tax) * (VAT_RATE / 100);
+const total = subtotal + tax + vat;
+return { subtotal, tax, vat, total };
+};
+
+const handleCreateBill = () => {
+if (!selectedTable || cartItems.length === 0) {
+alert(‘Please select table and add items’);
+return;
+}
+
+```
+const { subtotal, tax, vat, total } = calculateTotals();
+const newBill = {
+  id: `BILL${String(bills.length + 1).padStart(3, '0')}`,
+  tableNo: selectedTable,
+  items: cartItems,
+  totalBefore: subtotal,
+  tax,
+  vat,
+  totalAfter: total,
+  date: new Date(),
+  status: 'completed'
+};
+
+// Deduct from stocks
+const updatedStocks = stocks.map(stock => {
+  const cartItem = cartItems.find(item => item.id === stock.id);
+  if (cartItem) {
+    return { ...stock, quantity: stock.quantity - cartItem.quantity };
+  }
+  return stock;
+});
+setStocks(updatedStocks);
+
+setBills([...bills, newBill]);
+setCartItems([]);
+setSelectedTable(null);
+alert('Bill created successfully!');
+```
+
+};
+
+const handlePrintBill = (bill) => {
+setSelectedBill(bill);
+};
+
+// Dashboard Stats
+const totalStockValue = stocks.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+const totalSales = bills.filter(b => b.status === ‘completed’).reduce((sum, bill) => sum + bill.totalAfter, 0);
+const lowStockItems = stocks.filter(s => s.quantity <= s.minStock);
+
+return (
+<div className=“min-h-screen” style={{ background: ‘linear-gradient(135deg, #1a1f3a 0%, #16213e 100%)’ }}>
+{/* Header */}
+<div className="bg-gradient-to-r from-amber-600 to-orange-500 text-white p-4 shadow-2xl">
+<div className="max-w-7xl mx-auto flex justify-between items-center">
+<div className="flex items-center gap-3">
+<div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-orange-600 font-bold text-xl">A</div>
+<div>
+<h1 className="text-3xl font-bold">Asmita Hotel</h1>
+<p className="text-orange-100 text-sm">Property Management System</p>
+</div>
+</div>
+<div className="text-right text-orange-100">
+<p className="text-sm">Total Stock Value: ₹{totalStockValue.toLocaleString()}</p>
+<p className="text-sm">Total Sales: ₹{totalSales.toLocaleString()}</p>
+</div>
+</div>
+</div>
+
+```
+  {/* Navigation Tabs */}
+  <div className="max-w-7xl mx-auto mt-6 px-4">
+    <div className="flex gap-2 mb-6 flex-wrap">
+      {[
+        { id: 'dashboard', label: 'Dashboard', icon: Home },
+        { id: 'billing', label: 'Create Bill', icon: DollarSign },
+        { id: 'inventory', label: 'Inventory', icon: Package },
+        { id: 'sales', label: 'Sales History', icon: BarChart3 }
+      ].map(tab => {
+        const Icon = tab.icon;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all ${
+              activeTab === tab.id
+                ? 'bg-orange-500 text-white shadow-lg'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <Icon size={18} />
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+
+  <div className="max-w-7xl mx-auto px-4 pb-12">
+    {/* Dashboard Tab */}
+    {activeTab === 'dashboard' && (
+      <div className="space-y-6">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[
+            { label: 'Total Items', value: stocks.length, color: 'from-blue-500 to-blue-600' },
+            { label: 'Stock Value', value: `₹${(totalStockValue).toLocaleString()}`, color: 'from-green-500 to-green-600' },
+            { label: 'Total Sales', value: `₹${totalSales.toLocaleString()}`, color: 'from-purple-500 to-purple-600' },
+            { label: 'Low Stock Items', value: lowStockItems.length, color: 'from-red-500 to-red-600', alert: true }
+          ].map((stat, i) => (
+            <div key={i} className={`bg-gradient-to-br ${stat.color} rounded-lg p-6 text-white shadow-lg`}>
+              <p className="text-sm opacity-90 mb-2">{stat.label}</p>
+              <p className="text-3xl font-bold">{stat.value}</p>
+              {stat.alert && lowStockItems.length > 0 && (
+                <p className="text-xs mt-2 opacity-75">⚠️ Action needed</p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Low Stock Alert */}
+        {lowStockItems.length > 0 && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+            <h3 className="font-bold text-red-800 mb-3">⚠️ Low Stock Alert</h3>
+            <div className="space-y-2">
+              {lowStockItems.map(item => (
+                <div key={item.id} className="text-sm text-red-700 flex justify-between">
+                  <span>{item.name}: {item.quantity} units (Min: {item.minStock})</span>
+                  <span className="font-semibold">Reorder needed</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recent Bills */}
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Recent Bills</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Bill ID</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Table</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Items</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Total</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bills.slice(-5).reverse().map(bill => (
+                  <tr key={bill.id} className="border-b hover:bg-gray-50">
+                    <td className="px-4 py-3 font-semibold text-orange-600">{bill.id}</td>
+                    <td className="px-4 py-3">Table {bill.tableNo}</td>
+                    <td className="px-4 py-3">{bill.items.length} items</td>
+                    <td className="px-4 py-3 font-bold">₹{bill.totalAfter.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{bill.date.toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Billing Tab */}
+    {activeTab === 'billing' && (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Products List */}
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Menu Items</h2>
+          
+          {/* Filter by Category */}
+          <div className="mb-4 flex gap-2 flex-wrap">
+            {['All', 'Beverages', 'Food'].map(cat => (
+              <button
+                key={cat}
+                className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+            {stocks.map(product => (
+              <div
+                key={product.id}
+                className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-all cursor-pointer"
+                onClick={() => {
+                  setSelectedProduct(product);
+                  setShowAddToCart(true);
+                }}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-bold text-gray-800">{product.name}</h3>
+                  <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                    product.quantity > product.minStock
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {product.quantity} left
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 mb-3">{product.category}</p>
+                <p className="text-lg font-bold text-orange-600">₹{product.price}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bill Creation Sidebar */}
+        <div className="bg-white rounded-lg shadow-lg p-6 h-fit sticky top-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Create Bill</h2>
+          
+          {/* Table Selection */}
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Table Number</label>
+            <select
+              value={selectedTable || ''}
+              onChange={(e) => setSelectedTable(e.target.value ? parseInt(e.target.value) : null)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            >
+              <option value="">Select a table</option>
+              {Array.from({ length: 10 }, (_, i) => i + 1).map(table => (
+                <option key={table} value={table}>Table {table}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Cart Items */}
+          <div className="mb-4">
+            <h3 className="font-bold text-gray-800 mb-3">Cart Items</h3>
+            <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
+              {cartItems.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">No items added</p>
+              ) : (
+                cartItems.map(item => (
+                  <div key={item.id} className="text-sm border-b pb-2 last:border-0">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-semibold text-gray-800">{item.name}</span>
+                      <button
+                        onClick={() => handleRemoveFromCart(item.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <button
+                        onClick={() => handleUpdateCartQuantity(item.id, item.quantity - 1)}
+                        className="px-1 py-0 bg-gray-200 rounded hover:bg-gray-300"
+                      >
+                        <ArrowDown size={12} />
+                      </button>
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => handleUpdateCartQuantity(item.id, parseInt(e.target.value) || 1)}
+                        className="w-8 text-center border border-gray-300 rounded"
+                      />
+                      <button
+                        onClick={() => handleUpdateCartQuantity(item.id, item.quantity + 1)}
+                        className="px-1 py-0 bg-gray-200 rounded hover:bg-gray-300"
+                      >
+                        <ArrowUp size={12} />
+                      </button>
+                      <span className="ml-auto text-orange-600 font-bold">₹{(item.price * item.quantity).toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Totals */}
+          {cartItems.length > 0 && (
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2 mb-4 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-700">Subtotal</span>
+                <span className="font-semibold">₹{calculateTotals().subtotal.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-700">Tax ({TAX_RATE}%)</span>
+                <span className="font-semibold">₹{calculateTotals().tax.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-700">VAT ({VAT_RATE}%)</span>
+                <span className="font-semibold">₹{calculateTotals().vat.toLocaleString()}</span>
+              </div>
+              <div className="border-t pt-2 flex justify-between bg-orange-50">
+                <span className="font-bold text-gray-800">Total</span>
+                <span className="font-bold text-orange-600 text-lg">₹{calculateTotals().total.toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={handleCreateBill}
+            disabled={!selectedTable || cartItems.length === 0}
+            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            Create & Print Bill
+          </button>
+        </div>
+      </div>
+    )}
+
+    {/* Inventory Tab */}
+    {activeTab === 'inventory' && (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-white">Inventory Management</h2>
+          <button
+            onClick={() => {
+              setEditingStock(null);
+              setNewStock({ name: '', category: '', quantity: 0, price: 0, minStock: 0 });
+              setShowNewStockModal(true);
+            }}
+            className="flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-600"
+          >
+            <Plus size={20} /> Add New Item
+          </button>
+        </div>
+
+        {/* Stocks Table */}
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">Item Name</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">Category</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold">Quantity</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold">Price</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold">Total Value</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold">Min Stock</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stocks.map(stock => (
+                  <tr key={stock.id} className="border-b hover:bg-gray-50 transition-all">
+                    <td className="px-6 py-4 font-semibold text-gray-800">{stock.name}</td>
+                    <td className="px-6 py-4 text-gray-600">{stock.category}</td>
+                    <td className={`px-6 py-4 text-center font-bold ${
+                      stock.quantity <= stock.minStock ? 'text-red-600' : 'text-green-600'
+                    }`}>
+                      {stock.quantity}
+                    </td>
+                    <td className="px-6 py-4 text-center text-gray-800">₹{stock.price}</td>
+                    <td className="px-6 py-4 text-center font-bold text-orange-600">₹{(stock.price * stock.quantity).toLocaleString()}</td>
+                    <td className="px-6 py-4 text-center text-gray-600">{stock.minStock}</td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={() => {
+                          setEditingStock(stock);
+                          setNewStock(stock);
+                          setShowNewStockModal(true);
+                        }}
+                        className="text-blue-500 hover:text-blue-700 mr-3 inline-block"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteStock(stock.id)}
+                        className="text-red-500 hover:text-red-700 inline-block"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Sales History Tab */}
+    {activeTab === 'sales' && (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-white">Sales History</h2>
+        
+        {/* Sales Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { label: 'Total Bills', value: bills.filter(b => b.status === 'completed').length, color: 'from-blue-500 to-blue-600' },
+            { label: 'Total Revenue', value: `₹${totalSales.toLocaleString()}`, color: 'from-green-500 to-green-600' },
+            { label: 'Average Bill', value: `₹${bills.length > 0 ? Math.round(totalSales / bills.length).toLocaleString() : '0'}`, color: 'from-purple-500 to-purple-600' }
+          ].map((stat, i) => (
+            <div key={i} className={`bg-gradient-to-br ${stat.color} rounded-lg p-6 text-white shadow-lg`}>
+              <p className="text-sm opacity-90 mb-2">{stat.label}</p>
+              <p className="text-3xl font-bold">{stat.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Bills Table */}
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">Bill ID</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">Table</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold">Items</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold">Subtotal</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold">Tax + VAT</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold">Total</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold">Date</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bills.filter(b => b.status === 'completed').reverse().map(bill => (
+                  <tr key={bill.id} className="border-b hover:bg-gray-50 transition-all">
+                    <td className="px-6 py-4 font-semibold text-orange-600">{bill.id}</td>
+                    <td className="px-6 py-4 text-gray-800">Table {bill.tableNo}</td>
+                    <td className="px-6 py-4 text-center text-gray-600">{bill.items.length}</td>
+                    <td className="px-6 py-4 text-center text-gray-800">₹{bill.totalBefore.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-center text-gray-800">₹{(bill.tax + bill.vat).toLocaleString()}</td>
+                    <td className="px-6 py-4 text-center font-bold text-orange-600">₹{bill.totalAfter.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-gray-600">{bill.date.toLocaleDateString()}</td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={() => handlePrintBill(bill)}
+                        className="text-blue-500 hover:text-blue-700 mr-3 inline-block"
+                        title="View & Print"
+                      >
+                        <Printer size={18} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          const element = document.createElement('a');
+                          const file = new Blob([generateBillContent(bill)], {type: 'text/plain'});
+                          element.href = URL.createObjectURL(file);
+                          element.download = `${bill.id}.txt`;
+                          document.body.appendChild(element);
+                          element.click();
+                          document.body.removeChild(element);
+                        }}
+                        className="text-green-500 hover:text-green-700 inline-block"
+                        title="Download as Text"
+                      >
+                        <Download size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+
+  {/* Add/Edit Stock Modal */}
+  {showNewStockModal && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">{editingStock ? 'Edit Item' : 'Add New Item'}</h2>
+          <button onClick={() => setShowNewStockModal(false)} className="text-gray-500 hover:text-gray-700">
+            <X size={24} />
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Item Name</label>
+            <input
+              type="text"
+              value={newStock.name}
+              onChange={(e) => setNewStock({ ...newStock, name: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="e.g., Coffee"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+            <select
+              value={newStock.category}
+              onChange={(e) => setNewStock({ ...newStock, category: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            >
+              <option value="">Select Category</option>
+              <option value="Beverages">Beverages</option>
+              <option value="Food">Food</option>
+              <option value="Snacks">Snacks</option>
+              <option value="Desserts">Desserts</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Quantity</label>
+            <input
+              type="number"
+              value={newStock.quantity}
+              onChange={(e) => setNewStock({ ...newStock, quantity: parseInt(e.target.value) || 0 })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="0"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Price (₹)</label>
+            <input
+              type="number"
+              value={newStock.price}
+              onChange={(e) => setNewStock({ ...newStock, price: parseInt(e.target.value) || 0 })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="0"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Minimum Stock Level</label>
+            <input
+              type="number"
+              value={newStock.minStock}
+              onChange={(e) => setNewStock({ ...newStock, minStock: parseInt(e.target.value) || 0 })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="0"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={() => setShowNewStockModal(false)}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleAddStock}
+            className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold"
+          >
+            {editingStock ? 'Update Item' : 'Add Item'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* Add to Cart Modal */}
+  {showAddToCart && selectedProduct && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">{selectedProduct.name}</h2>
+          <button onClick={() => setShowAddToCart(false)} className="text-gray-500 hover:text-gray-700">
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="space-y-4 mb-6">
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <p className="text-sm text-gray-600 mb-1">Price per unit</p>
+            <p className="text-3xl font-bold text-orange-600">₹{selectedProduct.price}</p>
+          </div>
+
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <p className="text-sm text-gray-600 mb-1">Available Stock</p>
+            <p className="text-2xl font-bold text-gray-800">{selectedProduct.quantity} units</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Quantity to Add</label>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+              >
+                <ArrowDown size={20} />
+              </button>
+              <input
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-center text-lg font-bold focus:ring-2 focus:ring-orange-500"
+              />
+              <button
+                onClick={() => setQuantity(Math.min(selectedProduct.quantity, quantity + 1))}
+                className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+              >
+                <ArrowUp size={20} />
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-orange-50 p-4 rounded-lg">
+            <p className="text-sm text-gray-600 mb-1">Total for this item</p>
+            <p className="text-3xl font-bold text-orange-600">₹{(selectedProduct.price * quantity).toLocaleString()}</p>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowAddToCart(false)}
+            className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => handleAddToCart(selectedProduct)}
+            className="flex-1 px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-bold"
+          >
+            Add to Cart
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* Bill Preview/Print Modal */}
+  {selectedBill && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-2xl max-h-96 overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">Bill Preview</h2>
+          <button onClick={() => setSelectedBill(null)} className="text-gray-500 hover:text-gray-700">
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="border-2 border-dashed border-gray-300 p-6 bg-gray-50 rounded-lg font-mono text-sm">
+          <div className="text-center mb-4 border-b pb-4">
+            <h3 className="text-xl font-bold">ASMITA HOTEL</h3>
+            <p className="text-gray-600">Restaurant Billing System</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-4 border-b pb-4">
+            <div>
+              <p className="text-gray-600 text-xs">BILL ID</p>
+              <p className="font-bold">{selectedBill.id}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-gray-600 text-xs">DATE</p>
+              <p className="font-bold">{selectedBill.date.toLocaleDateString()}</p>
+            </div>
+            <div>
+              <p className="text-gray-600 text-xs">TABLE</p>
+              <p className="font-bold">Table {selectedBill.tableNo}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-gray-600 text-xs">TIME</p>
+              <p className="font-bold">{selectedBill.date.toLocaleTimeString()}</p>
+            </div>
+          </div>
+
+          <div className="mb-4 border-b pb-4">
+            <div className="grid grid-cols-4 gap-2 mb-2 text-xs font-bold border-b pb-2">
+              <div>ITEM</div>
+              <div className="text-center">QTY</div>
+              <div className="text-right">PRICE</div>
+              <div className="text-right">TOTAL</div>
+            </div>
+            {selectedBill.items.map((item, idx) => (
+              <div key={idx} className="grid grid-cols-4 gap-2 text-xs">
+                <div>{item.name}</div>
+                <div className="text-center">{item.quantity}</div>
+                <div className="text-right">₹{item.price}</div>
+                <div className="text-right">₹{(item.price * item.quantity).toLocaleString()}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-1 text-sm mb-4 border-b pb-4">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>₹{selectedBill.totalBefore.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Tax (5%)</span>
+              <span>₹{selectedBill.tax.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>VAT (5%)</span>
+              <span>₹{selectedBill.vat.toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div className="flex justify-between text-lg font-bold mb-4 border-b pb-4">
+            <span>TOTAL AMOUNT</span>
+            <span>₹{selectedBill.totalAfter.toLocaleString()}</span>
+          </div>
+
+          <div className="text-center text-xs text-gray-600">
+            <p>Thank you for your business!</p>
+            <p>Please visit again</p>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={() => window.print()}
+            className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold flex items-center justify-center gap-2"
+          >
+            <Printer size={20} /> Print Bill
+          </button>
+          <button
+            onClick={() => {
+              const element = document.createElement('a');
+              const file = new Blob([generateBillContent(selectedBill)], {type: 'text/plain'});
+              element.href = URL.createObjectURL(file);
+              element.download = `${selectedBill.id}.txt`;
+              document.body.appendChild(element);
+              element.click();
+              document.body.removeChild(element);
+              setSelectedBill(null);
+            }}
+            className="flex-1 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold flex items-center justify-center gap-2"
+          >
+            <Download size={20} /> Download
+          </button>
+          <button
+            onClick={() => setSelectedBill(null)}
+            className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+</div>
+```
+
+);
+};
+
+const generateBillContent = (bill) => {
+const date = bill.date.toLocaleDateString();
+const time = bill.date.toLocaleTimeString();
+
+const items = bill.items
+.map(item => `${item.name.padEnd(30)} x${item.quantity} = ₹${(item.price * item.quantity).toLocaleString()}`)
+.join(’\n’);
+
+return `
+${‘═’.repeat(50)}
+ASMITA HOTEL
+Restaurant Billing System
+${‘═’.repeat(50)}
+
+BILL ID: ${bill.id}
+TABLE: ${bill.tableNo}
+DATE: ${date} | TIME: ${time}
+
+${‘─’.repeat(50)}
+ITEMS
+${‘─’.repeat(50)}
+${items}
+
+${‘─’.repeat(50)}
+BILL SUMMARY
+${‘─’.repeat(50)}
+Subtotal          ₹${bill.totalBefore.toLocaleString()}
+Tax (5%)          ₹${bill.tax.toLocaleString()}
+VAT (5%)          ₹${bill.vat.toLocaleString()}
+${‘═’.repeat(50)}
+TOTAL AMOUNT      ₹${bill.totalAfter.toLocaleString()}
+${‘═’.repeat(50)}
+
+Thank you for your business!
+Please visit again.
+`;
+};
+
+export default AsmitaHotelPMS;
